@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Board game?</title>
+	<script>
+	var cwidth = 800, cheight = 500;
+	var dicex = 50, dicey = 50;
+	var dicewidth = 50, diceheight = 50;
+	var dotrad = 4;
+	var ctx;
+	var dx, dy;
+
+	var comDx, comDy, comOp;
+	var userDice_1, userDice_2, comDice_1, comDice_2;
+	var userRes, comRes;
+	var mapWidth = 360, mapHeight = 360;
+	var mapX = 200, mapY = 50;
+	var square = 60;
+
+	var saveScore = new Array(37);
+	var randCoord = new Array(37);
+	var btnOFF_1, btnOFF_2;
+
+	function throwdice() {
+		var user = 1, com = 0;
+		ctx = document.getElementById('canvas').getContext('2d');
+		userDice_1 = 1 + Math.floor(Math.random() * 6);	// 주사위 숫자 랜덤으로 구하기
+		dx = dicex;	// 주사위 x, y 좌표
+		dy = dicey;
+		ctx.clearRect(dx, dy, dx + dicewidth, dy + diceheight * 3);
+		comDx = dx + mapWidth + 200;
+		comDy = dy;
+		ctx.clearRect(comDx, comDy, comDx + dicewidth, comDy + diceheight * 3);
+		drawface(userDice_1, user);	// 첫 번째 주사위를 그림
+
+		dy = dicey + 100;
+		userDice_2 = 1 + Math.floor(Math.random() * 6);
+		drawface(userDice_2, user);	// 두 번째 주사위를 그림
+
+		dx = comDx;
+		dy = comDy;
+		comDice_1 = 1 + Math.floor(Math.random() * 6);
+		drawface(comDice_1, com);
+
+		dy = comDy + 100;
+		comDice_2 = 1 + Math.floor(Math.random() * 6);
+		drawface(comDice_2, com);
+
+		// 버튼 누름 확인 변수 초기화
+		btnOFF_1 = 1, btnOFF_2 = 1;
+	}
+
+	function drawface(n, checkUser) {
+		ctx.lineWidth = 5;
+		//ctx.clearRect(dx, dy, dicewidth, diceheight);
+		ctx.strokeRect(dx, dy, dicewidth, diceheight);
+		var dotx;
+		var doty;
+		if(checkUser)
+			ctx.fillStyle = "#009966";
+		else
+			ctx.fillStyle = "#FF0000";
+
+		switch (n) {
+			case 1:
+				draw1();
+				break;
+			case 2:
+				draw2();
+				break;
+			case 3:
+				draw2();
+				draw1();
+				break;
+			case 4:
+				draw4();
+				break;
+			case 5:
+				draw4();
+				draw1();
+				break;
+			case 6:
+				draw4();
+				draw2mid();
+				break;
+		}
+	}
+
+	function draw1() {
+		var dotx;
+		var doty;
+		ctx.beginPath();
+		dotx = dx + 0.5 * dicewidth;
+		doty = dy + 0.5 * diceheight;
+		ctx.arc(dotx, doty, dotrad, 0, Math.PI * 2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+	function draw2() {
+		var dotx;
+		var doty;
+		ctx.beginPath();
+		dotx = dx + 3 * dotrad;
+		doty = dy + 3 * dotrad;
+		ctx.arc(dotx, doty, dotrad, 0, Math.PI * 2, true);
+		dotx = dx + dicewidth - 3 * dotrad;
+		doty = dy + diceheight - 3 * dotrad;
+		ctx.arc(dotx, doty, dotrad, 0, Math.PI * 2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+	function draw4() {
+		var dotx;
+		var doty;
+		ctx.beginPath();
+		dotx = dx + 3 * dotrad;
+		doty = dy + 3 * dotrad;
+		ctx.arc(dotx, doty, dotrad, 0, Math.PI * 2, true);
+		dotx = dx + dicewidth - 3 * dotrad;
+		doty = dy + diceheight - 3 * dotrad;
+		ctx.arc(dotx, doty, dotrad, 0, Math.PI * 2, true);
+		ctx.closePath();
+		ctx.fill();
+		ctx.beginPath()
+		dotx = dx + 3 * dotrad;
+		doty = dy + diceheight - 3 * dotrad;
+		ctx.arc(dotx, doty, dotrad, 0, Math.PI * 2, true);
+		dotx = dx + dicewidth - 3 * dotrad;
+		doty = dy + 3 * dotrad;
+		ctx.arc(dotx, doty, dotrad, 0, Math.PI * 2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+	function draw2mid() {
+		var dotx;
+		var doty;
+		ctx.beginPath();
+		dotx = dx + 3 * dotrad;
+		doty = dy + 0.5 * diceheight;
+		ctx.arc(dotx, doty, dotrad, 0, Math.PI * 2, true);
+		dotx = dx + dicewidth - 3 * dotrad;
+		doty = dy + 0.5 * diceheight;
+		ctx.arc(dotx, doty, dotrad, 0, Math.PI * 2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+	
+	function calcOperator(op, dice1, dice2){
+		var res;
+		switch (op){
+			case '+':
+				res = dice1 + dice2;
+				break;
+			case '-':
+				res = dice1 - dice2;
+				if(res < 0)	res *= -1;
+				break;
+			case '/':
+				res = dice1 / dice2;
+				res = Math.floor(res);
+				break;
+			case '*':
+				res = dice1 * dice2;
+				break;
+			default:
+				break;
+		}
+		return res;
+	}
+
+	function DrawMap(){
+		ctx = document.getElementById('canvas').getContext('2d');
+		ctx.fillStyle = "#000000";
+		ctx.font = "20px Verdana";
+		ctx.beginPath();
+		ctx.clearRect(mapX, mapY, mapWidth, mapHeight);
+		ctx.strokeRect(mapX, mapY, mapWidth, mapHeight);
+
+		// 점수 초기화
+		InitScore();
+		for(var i = 1; i <= 6; i++){
+			// 세로 선
+			ctx.moveTo(mapX + i * square, mapY);
+			ctx.lineTo(mapX + i * square, mapY + mapHeight);
+			ctx.stroke();
+			// 가로 텍스트
+			ctx.fillText(i, mapX + i * square - square / 2, mapY - 20);
+			// 세로 텍스트
+			ctx.fillText(i, mapX - 20, mapY + i * square - square / 2);
+			//가로 선
+			ctx.moveTo(mapX, mapY + i * square);
+			ctx.lineTo(mapX + mapWidth, mapY + i * square);
+			ctx.stroke();
+			// 바둑판 위치 텍스트
+			for(var j = 1; j <= 6; j++){
+				ctx.fillText(randCoord[(i - 1) * 6 + j], mapX + 20 + (j - 1) * square,mapY + 35 + (i - 1) * square);
+			}
+		}
+		ctx.closePath();
+	}
+
+	function DrawO(player){
+		var usrOp;
+		var inCoord;
+		var showO;
+		var rad = 20;
+
+		// 버튼을 이미 누른 경우 / 모든 플레이어의 턴이 종료 된 경우
+		if(!btnOFF_1 && !btnOFF_2){
+			return alert('turn ended!');
+		}
+		else if(!btnOFF_1 && player == 1){
+			return alert('Player2\'s turn!');
+		}
+		else if(!btnOFF_2 && player == 2){
+			return alert('Player1\'s turn!');
+		}
+		
+		ctx = document.getElementById('canvas').getContext('2d');
+		if(player == 1){
+			btnOFF_1 = 0;
+			usrOp = document.forms["subRes"]["userOperator"].value;
+			inCoord = document.forms["subRes"]["selXYType"].value;
+			
+			if(inCoord == "coordinate")
+				showO = 6 * (userDice_2 - 1) + userDice_1;	// 좌표 -> 연산 변환
+			else if(inCoord == "operator")
+				showO = calcOperator(usrOp, userDice_1, userDice_2);	// 연산 결과 값 계산	
+		}
+		else if(player == 2){
+			btnOFF_2 = 0;
+			usrOp = document.forms["subRes2"]["userOperator2"].value;
+			inCoord = document.forms["subRes2"]["selXYType2"].value;
+
+			if(inCoord == "coordinate")
+				showO = 6 * (comDice_2 - 1) + comDice_1;	// 좌표 -> 연산 변환
+			else if(inCoord == "operator")
+				showO = calcOperator(usrOp, comDice_1, comDice_2);	// 연산 결과 값 계산
+		}
+		// 계산 결과가 0인 경우, 턴 스킵으로 간주
+		if(!showO){
+			return alert('you wasted your turn!');
+		}
+
+		/*
+		 * 연산자를 선택 한 경우, 해당 숫자를 배열에 맞는 숫자로 변환하기
+		*/
+		function convertCoord(pos, player, chkCoord){
+			var i = 1;
+			if(chkCoord == "operator"){
+				while(i <= 36){
+					if(randCoord[i] == pos)	break;
+					else	i++;
+				}
+				return i;
+			}
+			else	return pos;
+		}
+		showO = convertCoord(showO, player, inCoord);
+
+		function SavePos(pos, player){
+			saveScore[pos] = player;
+		}
+		SavePos(showO, player);	// 점수 저장
+
+		/*
+		 * 여기에 오셀로 알고리즘 작성
+		*/
+		function Othello(showO, player){
+			var chkO = 0;
+			var currO = player;
+			var x, y;
+			var i;
+			y = Math.floor(showO / 6);
+			x = showO - (y * 6);
+			if(!x){	// x == 0 인 경우
+				y -= 1;
+				x = showO - (y * 6);
+			}
+			// 가로 오른쪽 방향 찾기
+			for(i = x + 1; i <= 6; i++){
+				if(saveScore[(y * 6) + i] == 0)	break;
+				else if(saveScore[(y * 6) + i] != player){
+					chkO = 1;
+				}
+				else if(saveScore[(y * 6) + i] == player){
+					if(chkO)	chkO = 2;
+					break;
+				}
+			}
+			if(chkO == 2){
+				for(var j = x + 1; j < i; j++){
+					saveScore[(y * 6) + j] = player;
+				}
+				chkO = 0;
+			}
+			// 가로 왼쪽 방향 찾기
+			for(i = x - 1; i >= 0; i--){
+				if(saveScore[(y * 6) + i] == 0)	break;
+				else if(saveScore[(y * 6) + i] != player){
+					chkO = 1;
+				}
+				else if(saveScore[(y * 6) + i] == player){
+					if(chkO)	chkO = 2;
+					break;
+				}
+			}
+			if(chkO == 2){
+				for(var j = x - 1; j > i; j--){
+					saveScore[(y * 6) + j] = player;
+				}
+				chkO = 0;
+			}
+			// 세로 아래쪽 방향 찾기
+			for(i = y + 1; i <= 6; i++){
+				if(saveScore[(i * 6) + x] == 0)	break;
+				else if(saveScore[(i * 6) + x] != player){
+					chkO = 1;
+				}
+				else if(saveScore[(i * 6) + x] == player){
+					if(chkO)	chkO = 2;
+					break;
+				}
+			}
+			if(chkO == 2){
+				for(var j = y + 1; j < i; j++){
+					saveScore[(j * 6) + x] = player;
+				}
+				chkO = 0;
+			}
+			// 세로 위쪽 방향 찾기
+			for(i = y - 1; i >= 0; i--){
+				if(saveScore[(i * 6) + x] == 0)	break;
+				else if(saveScore[(i * 6) + x] != player){
+					chkO = 1;
+				}
+				else if(saveScore[(i * 6) + x] == player){
+					if(chkO)	chkO = 2;
+					break;
+				}
+			}
+			if(chkO == 2){
+				for(var j = y - 1; j > i; j--){
+					saveScore[(j * 6) + x] = player;
+				}
+				chkO = 0;
+			}
+
+		}
+		Othello(showO, player);
+
+		function DrawAll0(){	// 바둑알 그리는 함수
+			
+			for(var i = 1; i <= 36; i++){
+				ctx.beginPath();
+				if(saveScore[i] == 1){
+					ctx.fillStyle = "#009966";
+					DrawFunction(i);
+				}
+				else if(saveScore[i] == 2){
+					ctx.fillStyle = "#FF0000";
+					DrawFunction(i);
+				}
+				ctx.fill();
+				ctx.closePath();
+			}
+			function DrawFunction(i){
+				if(i % 6)
+					ctx.arc(mapX + 30 + square * ((i % 6) - 1), mapY + 30 + square * Math.floor(i / 6), rad, 0, Math.PI * 2, true);
+				else if(i / 6)
+					ctx.arc(mapX + 30 + square * 5, mapY + 30 + square * (Math.floor(i / 6) - 1), rad, 0, Math.PI * 2, true);
+				else
+					ctx.arc(mapX + 30 + square * 5, mapY + 30 + square * Math.floor(i / 6), rad, 0, Math.PI * 2, true);
+			}
+		}
+		DrawAll0();
+		ctx.fill();
+
+		ShowScore();
+	}
+
+	function InitScore(){
+		// init array
+		for(var i = 0; i <= 36; i++){
+			saveScore[i] = 0;
+		}
+		// random map
+		var tempArray = new Array(37);
+		for(var i = 0; i <= 36; i++){
+			tempArray[i] = 1;
+		}
+		var j = 1;
+		while(j <= 36){
+			var rand = 1 + Math.floor(Math.random() * 36);
+			if(tempArray[rand]){
+				randCoord[j++] = rand;
+				tempArray[rand] = 0;
+			}
+		}
+	}
+
+	function ShowScore(){
+
+		ctx.clearRect(dicex, dicey + square * 3 + 20, dicex + square, dicey + square * 3 + 20 + square);
+		ctx.clearRect(comDx, comDy + square * 3 + 20, comDx + square, comDy + square * 3 + 20 + square);
+		ctx.font = "30px Verdana";
+		
+		var player1 = 0, player2 = 0;
+		for(var i = 0; i < saveScore.length; i++){
+			if(saveScore[i] == 1)	player1++;
+			else if(saveScore[i] == 2) player2++;
+		}
+		ctx.fillStyle = "#009966";
+		ctx.fillText(player1, dicex, dicey + square * 4);
+		ctx.fillStyle = "#FF0000";
+		ctx.fillText(player2, comDx, comDy + square * 4);
+
+		// 게임 종료 조건
+		if(player1 + player2 == saveScore.length - 1){
+			// player1 우승
+			if(player1 > player2)	alert('player1 wins!');
+			else if(player1 < player2) alert('player2 wins!');
+			else	alert('draw!');
+		}
+	}
+
+	// 맵 버튼 비활성화 함수
+	function disableBtn(){
+		document.getElementById("drawMap").disabled = true;
+	}
+	</script>
+	<style>
+		form.player1{
+			position: fixed;
+			top: 0;
+			left: 800px;
+		}
+		form.player2{
+			position: fixed;
+			top: 250px;
+			left: 800px;
+		}
+		button.buttonP1{
+			position: fixed;
+			top: 240px;
+			left: 800px;
+		}
+		button.buttonP2{
+			position: fixed;
+			top: 490px;
+			left: 800px;
+		}
+	</style>
+</head>
+
+<body>
+	<canvas id="canvas" width="800" height="500">This browser does not support canvas element in HTML5</canvas>
+	<br>
+	<button onclick="throwdice();">Throw dice</button>
+	<button id="drawMap" onclick="DrawMap(); disableBtn();">Draw map</button>
+	<button onclick="DrawO(1);" class="buttonP1">Player1</button>
+	<button onclick="DrawO(2);" class="buttonP2">Player2</button>
+	<br>
+	<form name="subRes" method="post" class="player1">
+		<h1>Player1</h1>
+		<p>좌표 / 연산 선택</p>
+		<input type="radio" name="selXYType" value="coordinate" checked> 좌표<br>
+		<input type="radio" name="selXYType" value="operator"> 연산<br>
+		<p>연산자 선택</p>
+		<select name="userOperator">
+			<option value="+" selected>+</option>
+			<option value="-">-</option>
+			<option value="*">*</option>
+			<option value="/">/</option>
+		</select>
+	</form>
+	<form name="subRes2" method="post" class="player2">
+		<h1>Player2</h1>
+		<p>좌표 / 연산 선택</p>
+		<input type="radio" name="selXYType2" value="coordinate" checked> 좌표<br>
+		<input type="radio" name="selXYType2" value="operator"> 연산<br>
+		<p>연산자 선택</p>
+		<select name="userOperator2">
+			<option value="+" selected>+</option>
+			<option value="-">-</option>
+			<option value="*">*</option>
+			<option value="/">/</option>
+		</select>
+	</form>
+</body>
+
+</html>
